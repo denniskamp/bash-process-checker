@@ -1,0 +1,46 @@
+#!/bin/bash
+# Script   : process.chk
+# Website  : https://bash.dennis.pet/process-checker/
+# Descr.   : Simple process checker, that finds out if the service is running or not.
+# Tested on Debian and CentOS.
+# ----------------------------------------------------------------------------
+# Author: Dennis Kamp - https://www.dennis.pet/
+# Copyright: 2018 Dennis Kamp, GNU GPL v2.0+
+# ----------------------------------------------------------------------------
+
+## Change to fit your distro
+_pgrep="/usr/bin/pgrep"
+_mail="/usr/bin/mail"
+
+## Add binary list to process check here
+_chklist="/usr/bin/php-fpm /usr/sbin/mysqld /usr/sbin/apache2 /usr/sbin/named"
+
+## Sendmail? yes | no
+_sendemail="no"
+
+## Change to fit your email address
+_email="dennis@dennis.pet"
+
+## Do not change below this, unless you know what you're doing
+_failed="false"
+_service="Service:"
+
+_running() {
+	local p="${1##*/}"
+	local s="true"
+	$_pgrep "${p}" >/dev/null || { s="false"; _failed="true"; _service="${_service} $1,"; }
+	[[ "$s" == "true" ]] && echo "$1 running" || { echo -n "$1 not running"; [[ ! -f "$1" ]] && echo " [ $1 not found ]" || echo ; }
+}
+echo "Service status on ${HOSTNAME} @ $(date)"
+echo "------------------------------------------------------"
+
+## Check if the process are running or not
+for s in $_chklist
+do
+	_running "$s"
+done
+
+## Send email alert notifications ##
+[[ "$_failed" == "true" && "$_sendemail" == "yes" ]] && { _mess="$_service failed on $HOSTNAME @ $(date)"; 
+	$_mail -s 'Service not found' "$_email" < "${_mess}";
+}
